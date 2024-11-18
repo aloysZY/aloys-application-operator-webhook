@@ -1,0 +1,26 @@
+apiVersion: apps.aloys.cn/v1
+kind: Application
+metadata:
+  labels:
+    app.kubernetes.io/name: aloys-application-operator-webhook
+    app.kubernetes.io/managed-by: kustomize
+  name: application-sample-webhook
+spec:
+  deployment:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: application-sample-webhook
+    template:
+      spec:
+        containers:
+          - name: application-sample-webhook
+            image: nginx
+            ports:
+              - containerPort: 80
+  service:
+    type: NodePort
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 80
