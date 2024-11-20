@@ -4,10 +4,10 @@ metadata:
   labels:
     app.kubernetes.io/name: aloys-application-operator-webhook
     app.kubernetes.io/managed-by: kustomize
-  name: application-sample-webhook
+  name: application-sample-webhook-444
 spec:
   deployment:
-    replicas: 3
+    replicas: 32
     selector:
       matchLabels:
         app: application-sample-webhook

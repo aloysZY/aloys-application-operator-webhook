@@ -37,17 +37,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/aloys.zy/aloys-application-operator-webhook/internal/controller"
+	webhookappsv1 "github.com/aloys.zy/aloys-application-operator-webhook/internal/webhook/v1"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	// scheme 它提供了 Kinds 与对应的 Go Type 的映射，即给定了 Go Type，就能够知道它的 GKV(Group Kind Verision)，这也是 Kubernetes 所有资源的注册模式
+	scheme = runtime.NewScheme()
+	// 日志初始化
 	setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
+	// Scheme 绑定内置资源
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	// Scheme 绑定自建 CRD
 	utilruntime.Must(appv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -92,9 +96,25 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
-	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts: tlsOpts,
-	})
+	var webhookServer webhook.Server
+	// 为了在本地启动使用证书
+	if os.Getenv("ENV") == "DEV" {
+		path, _ := os.Getwd()
+		webhookServer = webhook.NewServer(webhook.Options{
+			TLSOpts: tlsOpts,
+			// 获取证书位置
+			CertDir: path + "/internal/webhook/certs",
+		})
+	} else {
+		// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
+		webhookServer = webhook.NewServer(webhook.Options{
+			TLSOpts: tlsOpts,
+		})
+	}
+
+	// webhookServer := webhook.NewServer(webhook.Options{
+	// 	TLSOpts: tlsOpts,
+	// })
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
 	// More info:
@@ -117,7 +137,7 @@ func main() {
 		// generate self-signed certificates for the metrics server. While convenient for development and testing,
 		// this setup is not recommended for production.
 	}
-
+	// mgr基本配置
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -141,13 +161,24 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
+	// 注册controller
 	if err = (&controller.ApplicationReconciler{
+		// 将 Manager 的 Client 传给 AppReconciler， (r *AppReconciler) Reconciler方法就可以使用client
 		Client: mgr.GetClient(),
+		// 将 Manager 的 Scheme 传给 AppReconciler， get/list获取集群信息默认是先查询Scheme
 		Scheme: mgr.GetScheme(),
+		// 初始化事件方法
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
+	}
+	// 注册webhook
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = webhookappsv1.SetupApplicationWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Application")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 

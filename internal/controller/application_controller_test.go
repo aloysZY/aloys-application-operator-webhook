@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	appv1 "github.com/aloys.zy/aloys-application-operator/api/v1"
+	appv1 "github.com/aloys.zy/aloys-application-operator-webhook/api/v1"
 )
 
 var _ = Describe("Application Controller", func() {
