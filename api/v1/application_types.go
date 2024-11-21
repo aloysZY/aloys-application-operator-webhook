@@ -63,6 +63,7 @@ type ApplicationStatus struct {
 // +kubebuilder:printcolumn:name="UpdatedReplicas",type="string",JSONPath=".spec.deployment.replicas.updatedReplicas"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=applications,singular=application,scope=Namespaced,shortName=app
+// +kubebuilder:storageversion
 
 // Application is the Schema for the applications API.
 type Application struct {

@@ -75,6 +75,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	<-time.NewTicker(1000 * time.Millisecond).C
 	CounterReconcileApplication += 1
 	log.Info("Starting a reconcile", "number", CounterReconcileApplication)
+
 	// 获取 Application 对象的状态
 	application := &appv1.Application{}
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
@@ -88,6 +89,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Error(err, "Failed to get Application,will request after a short time.", "name", req.NamespacedName)
 		return ctrl.Result{RequeueAfter: GenericRequeueDuration}, err
 	}
+	// a := application.GetResourceVersion()
+
 	// 多次使用这个变量，提前声明，但是都是在栈上进行的操作，感觉性能影响非常小 var result ctrl.Result var err error
 	if result, err := r.reconcileDeployment(ctx, application); err != nil {
 		log.Error(err, "Failed to reconcile deployment.", "name", req.Name)

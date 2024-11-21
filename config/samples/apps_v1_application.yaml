@@ -7,7 +7,7 @@ metadata:
   name: application-sample-webhook-444
 spec:
   deployment:
-    replicas: 32
+    replicas: 2
     selector:
       matchLabels:
         app: application-sample-webhook

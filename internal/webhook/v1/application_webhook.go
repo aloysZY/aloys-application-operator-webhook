@@ -74,6 +74,9 @@ func (d *ApplicationCustomDefaulter) Default(ctx context.Context, obj runtime.Ob
 	applicationlog.Info("Defaulting for Application", "name", application.GetName())
 
 	// TODO(user): fill in your defaulting logic.
+	if application.Spec.Deployment.Replicas == nil {
+		return nil
+	}
 	// 判断副本数量
 	if *application.Spec.Deployment.Replicas != d.DefaultReplicas {
 		application.Spec.Deployment.Replicas = &d.DefaultReplicas
