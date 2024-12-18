@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	admissionv1 "k8s.io/api/admission/v1"
+	admissionadmissionv1 "k8s.io/api/admission/v1"
 
 	appsv1 "github.com/aloys.zy/aloys-application-operator-webhook/api/v1"
 
