@@ -1,4 +1,4 @@
-bases:
+resources:
   - ../default
 
 patches:
@@ -10,19 +10,19 @@ patches:
   - patch: |
       - op: "add"
         path: "/spec/ipAddresses"
-        value: ["172.20.10.3"]
+        value: ["172.20.10.2"]
     target:
       kind: Certificate
   - patch: |
       - op: "add"
         path: "/webhooks/0/clientConfig/url"
-        value: "https://172.20.10.3:9443/mutate-apps-aloys-cn-v1-application"
+        value: "https://172.20.10.2:9443/mutate-apps-aloys-cn-v1-application"
     target:
       kind: MutatingWebhookConfiguration
   - patch: |
       - op: "add"
         path: "/webhooks/0/clientConfig/url"
-        value: "https://172.20.10.3:9443/validate-apps-aloys-cn-v1-application"
+        value: "https://172.20.10.2:9443/validate-apps-aloys-cn-v1-application"
     target:
       kind: ValidatingWebhookConfiguration
   - patch: |
