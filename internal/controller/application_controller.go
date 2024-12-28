@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +40,8 @@ import (
 // ApplicationReconciler reconciles a Application object
 type ApplicationReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=apps.aloys.cn,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -68,8 +70,9 @@ const GenericRequeueDuration = 1 * time.Minute
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 // 实现具体的调谐逻辑
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	setupLog := log.FromContext(ctx)
-	setupLog.V(1).Info("xxxxxxxxxx")
+	setupLog := log.FromContext(ctx).WithName("Reconcile")
+	// setupLog.V(0).Info("000000") // 0是 info 不写就是0
+	// setupLog.V(1).Info("11111")  // 1是 debug
 
 	// TODO(user): your log here
 	// 调谐逻辑是并发的，我设置的是10，当时多个goroutine同时运行的时候，日志比较乱，这里增加了一个100毫秒的等待，并且添加了一个当前调谐次数的打印

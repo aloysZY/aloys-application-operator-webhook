@@ -6,6 +6,7 @@ import (
 
 	appv1 "github.com/aloys.zy/aloys-application-operator-webhook/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +19,7 @@ func (r *ApplicationReconciler) reconcileDeployment(ctx context.Context, applica
 	// and applying necessary changes to achieve the desired state.
 	// You can use Kubernetes client-go to interact with the Kubernetes API server.
 	// controllerutil.CreateOrPatch() 或者	// ctrl.CreateOrUpdate() 替换手工判断创建
-	log := log.FromContext(ctx)
+	setupLog := log.FromContext(ctx).WithName("reconcileDeployment")
 	appNamespace := application.Namespace
 	appName := application.Name + "-deployment"
 	dp := &appsv1.Deployment{}
@@ -31,24 +32,24 @@ func (r *ApplicationReconciler) reconcileDeployment(ctx context.Context, applica
 	err := r.Get(ctx, client.ObjectKey{Namespace: appNamespace, Name: appName}, dp)
 	// 如果deployment资源存在
 	if err == nil {
-		log.Info("The deployment has already exist.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+		setupLog.Info("The deployment has already exist.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 		// 判断application.Status是不是最新的,最新的就结束本次调谐
 		if reflect.DeepEqual(dp.Status, application.Status.Workflow) {
-			// log.V(2).Info("The deployment status is already the same as the desired status.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+			setupLog.V(1).Info("The deployment status is already the same as the desired status.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 			return ctrl.Result{}, nil
 		}
 		// 不是最新的就进行赋值，更新状态,更新失败进行重试
 		application.Status.Workflow = dp.Status
 		if err := r.Status().Update(ctx, application); err != nil {
-			log.Error(err, "Failed to update the deployment status.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+			setupLog.Error(err, "Failed to update the deployment status.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 			return ctrl.Result{RequeueAfter: GenericRequeueDuration}, err
 		}
-		log.Info("The Application Workflow status has been updated.", "name", appNamespace, "name", appName)
+		setupLog.Info("The Application Workflow status has been updated.", "name", appNamespace, "name", appName)
 		return ctrl.Result{}, nil
 	}
 	// 先进行判断是不是不存在之外的错误场景，不是不存的错误就直接重试
 	if !errors.IsNotFound(err) {
-		log.Error(err, "Failed to get the Deployment,will request after a short time.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+		setupLog.Error(err, "Failed to get the Deployment,will request after a short time.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 		return ctrl.Result{RequeueAfter: GenericRequeueDuration}, err
 	}
 	newDp := &appsv1.Deployment{}
@@ -60,14 +61,15 @@ func (r *ApplicationReconciler) reconcileDeployment(ctx context.Context, applica
 	newDp.Spec.Template.SetLabels(application.Spec.Deployment.Selector.MatchLabels)
 	// 设置 OwnerReference，使 dp 成为 Application 的子资源
 	if err := ctrl.SetControllerReference(application, newDp, r.Scheme); err != nil {
-		log.Error(err, "Failed to set the owner reference for the Deployment.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+		setupLog.Error(err, "Failed to set the owner reference for the Deployment.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 		return ctrl.Result{RequeueAfter: GenericRequeueDuration}, err
 	}
 	// 状态和应用状态进行关联，这里是没有必要的创建 Deployment 后，Kubernetes 会自动触发事件，这些事件会被控制器捕获，控制器会重新调用 Reconcile 函数，此时可以检查并更新 application 的状态，等待事件触发，让 Reconcile 函数自然地处理状态更新，不需要重复的触发Reconcile。 application.Status.Workflow = dp.Status 创建后不需要再次触发更新application.status
 	if err := r.Create(ctx, newDp); err != nil {
-		log.Error(err, "Failed to create the Deployment.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+		setupLog.Error(err, "Failed to create the Deployment.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
 		return ctrl.Result{RequeueAfter: GenericRequeueDuration}, err
 	}
-	log.Info("The Deployment has been created.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+	setupLog.Info("The Deployment has been created.", "DeploymentNamespace", appNamespace, "DeploymentName", appName)
+	r.Recorder.Eventf(application, corev1.EventTypeNormal, "Modified", "Deployment create: deplymane Name:%s deployment Namespace:%s", newDp.Name, newDp.Namespace)
 	return ctrl.Result{}, nil
 }

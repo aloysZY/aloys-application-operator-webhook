@@ -203,6 +203,7 @@ func main() {
 		// 将 Manager 的 Scheme 传给 AppReconciler， get/list获取集群信息默认是先查询Scheme
 		Scheme: mgr.GetScheme(),
 		// 初始化事件方法
+		Recorder: mgr.GetEventRecorderFor("Application"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
