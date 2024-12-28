@@ -22,6 +22,8 @@ import (
 	"os"
 
 	appv1 "github.com/aloys.zy/aloys-application-operator-webhook/api/v1"
+	ubzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -73,13 +75,54 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	// 日志相关配置
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
 
+	// 定义自定义的 Zap 选项
+	opts := zap.Options{
+		Development:     false,                                   // 生产环境模式
+		Level:           ubzap.NewAtomicLevelAt(ubzap.InfoLevel), // 设置日志级别为 Info
+		StacktraceLevel: ubzap.ErrorLevel,                        // 只在 Error 级别及以上添加堆栈跟踪
+		// TimeEncoder:     zapcore.RFC3339TimeEncoder,              // 使用 RFC3339 格式的时间戳，全局的
+		Encoder: zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+			TimeKey:       "ts",                          // 时间戳字段的键名
+			LevelKey:      "level",                       // 日志级别字段的键名
+			NameKey:       "logger",                      // 日志记录器名称字段的键名
+			CallerKey:     "caller",                      // 调用者信息字段的键名
+			MessageKey:    "msg",                         // 日志消息字段的键名
+			StacktraceKey: "stacktrace",                  // 堆栈跟踪字段的键名
+			LineEnding:    zapcore.DefaultLineEnding,     // 每行日志的换行符默认是/n
+			EncodeLevel:   zapcore.LowercaseLevelEncoder, // 小写日志级别
+			// 	zapcore.StringDurationEncoder: 以字符串形式表示（如 1.234s）
+			// zapcore.SecondsDurationEncoder: 以秒为单位表示（如 1.234）
+			// zapcore.MillisDurationEncoder: 以毫秒为单位表示（如 1234）
+			// zapcore.NanosDurationEncoder: 以纳秒为单位表示（如 1234567890）
+			EncodeTime:     zapcore.RFC3339TimeEncoder,     // 时间戳的编码方式（RFC3339 格式）
+			EncodeDuration: zapcore.SecondsDurationEncoder, // 持续时间的编码方式（秒）
+			EncodeCaller:   zapcore.ShortCallerEncoder,     // 简短的调用者信息
+
+		}),
+		DestWriter: os.Stdout, // 输出到标准输出
+		ZapOpts: []ubzap.Option{
+			ubzap.AddCaller(), // 添加调用者信息
+		},
+	}
+	// 日志参数绑定到命令行
+	//   -zap-devel
+	//        Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
+	//  -zap-encoder value
+	//        Zap log encoding (one of 'json' or 'console')
+	//  -zap-log-level value
+	//        Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', or any integer value > 0 which corresponds to custom debug levels of increasing verbosity
+	//  -zap-stacktrace-level value
+	//        Zap Level at and above which stacktraces are captured (one of 'info', 'error', 'panic').
+	//  -zap-time-encoding value
+	//        Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'). Defaults to 'epoch'.
+	// 命令行参数优先：命令行参数具有最高优先级，会覆盖代码中显式定义的配置。
+	// 环境变量次之：环境变量的优先级低于命令行参数，但高于代码中的默认配置。
+	// 代码中显式定义的配置：这是最低优先级的配置，只有在没有命令行参数或环境变量的情况下才会生效。
+	opts.BindFlags(flag.CommandLine)
+	// 解析命令行参数
+	flag.Parse()
+	// 应用自定义选项并设置全局日志记录器
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
@@ -98,24 +141,15 @@ func main() {
 	}
 
 	var webhookServer webhook.Server
-	// 为了在本地启动使用证书
-	if os.Getenv("ENV") == "DEV" {
-		path, _ := os.Getwd()
-		webhookServer = webhook.NewServer(webhook.Options{
-			TLSOpts: tlsOpts,
-			// 获取证书位置
-			CertDir: path + "/internal/webhook/certs",
-		})
-	} else {
-		// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
-		webhookServer = webhook.NewServer(webhook.Options{
-			TLSOpts: tlsOpts,
-		})
-	}
-
-	// webhookServer := webhook.NewServer(webhook.Options{
-	// 	TLSOpts: tlsOpts,
-	// })
+	// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
+	webhookServer = webhook.NewServer(webhook.Options{
+		// 获取证书位置,在本地测试使用
+		CertDir:  "./internal/webhook/certs",
+		CertName: "tls.crt",
+		KeyName:  "tls.key",
+		// 默认配置
+		TLSOpts: tlsOpts,
+	})
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
 	// More info:

@@ -216,7 +216,7 @@ endef
 dev: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/dev > deploytest.yaml
-#$(KUSTOMIZE) build config/dev | kubectl create -f -
+	$(KUSTOMIZE) build config/dev | kubectl create -f -
 
 .PHONY: undev
 undev: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.

@@ -56,6 +56,7 @@ func SetupApplicationWebhookWithManager(mgr ctrl.Manager) error {
 // as it is used only for temporary operations and does not need to be deeply copied.
 type ApplicationCustomDefaulter struct {
 	// TODO(user): Add more fields as needed for defaulting
+
 	// 可以自定义一些字段内容，在Default内进行使用
 	DefaultReplicas int32 `json:"-"`
 	// DefaultImage    string `json:"-"`
