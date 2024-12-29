@@ -60,10 +60,12 @@ func init() {
 
 func main() {
 	var metricsAddr string
-	var enableLeaderElection bool
+	var pprofAddr string
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var enablePprof bool
+	var enableLeaderElection bool
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -75,6 +77,8 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.BoolVar(&enablePprof, "enable-pprof", false, "Enable pprof profiling")
+	flag.StringVar(&pprofAddr, "pprof-addr", "localhost:6060", "The address on which to expose the pprof handler")
 
 	// 定义自定义的 Zap 选项
 	opts := zap.Options{
@@ -143,10 +147,11 @@ func main() {
 	var webhookServer webhook.Server
 	// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
 	webhookServer = webhook.NewServer(webhook.Options{
+		Port: 9443, // 设置webhook服务监听端口，默认9443
 		// 获取证书位置,在本地测试使用
-		CertDir:  "./internal/webhook/certs",
-		CertName: "tls.crt",
-		KeyName:  "tls.key",
+		// CertDir:  "./internal/webhook/certs",
+		// CertName: "tls.crt",
+		// KeyName:  "tls.key",
 		// 默认配置
 		TLSOpts: tlsOpts,
 	})
@@ -172,6 +177,13 @@ func main() {
 		// generate self-signed certificates for the metrics server. While convenient for development and testing,
 		// this setup is not recommended for production.
 	}
+	// 计算 PprofBindAddress 的值
+	var pprofBindAddress string
+	if enablePprof && pprofAddr != "" && pprofAddr != ":0" {
+		pprofBindAddress = pprofAddr
+	} else {
+		pprofBindAddress = ""
+	}
 	// mgr基本配置
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -180,6 +192,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "db092cec.aloys.cn",
+		PprofBindAddress:       pprofBindAddress,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
