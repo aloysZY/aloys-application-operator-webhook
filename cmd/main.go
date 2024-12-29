@@ -147,7 +147,7 @@ func main() {
 	var webhookServer webhook.Server
 	// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
 	webhookServer = webhook.NewServer(webhook.Options{
-		Port: 9443, // 设置webhook服务监听端口，默认9443
+		// Port: 9443, // 设置webhook服务监听端口，默认9443
 		// 获取证书位置,在本地测试使用
 		// CertDir:  "./internal/webhook/certs",
 		// CertName: "tls.crt",
