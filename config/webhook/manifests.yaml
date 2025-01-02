@@ -12,6 +12,17 @@ webhooks:
       namespace: system
       path: /mutate-apps-aloys-cn-v1-application
   failurePolicy: Fail
+  namespaceSelector:
+    matchExpressions:
+      - key: metadata.name
+        operator: NotIn
+        values:
+          - kube-system
+          - default
+          - cert-manager
+          - monitoring
+          - kube-node-lease
+          - kube-public
   name: mapplication-v1.kb.io
   rules:
   - apiGroups:
@@ -38,6 +49,18 @@ webhooks:
       namespace: system
       path: /validate-apps-aloys-cn-v1-application
   failurePolicy: Fail
+  #特定namespace不受这个规则限制
+  namespaceSelector:
+    matchExpressions:
+      - key: metadata.name
+        operator: NotIn
+        values:
+          - kube-system
+          - default
+          - cert-manager
+          - monitoring
+          - kube-node-lease
+          - kube-public
   name: vapplication-v1.kb.io
   rules:
   - apiGroups:
