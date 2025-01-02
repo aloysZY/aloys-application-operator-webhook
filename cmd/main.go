@@ -62,11 +62,13 @@ func main() {
 	var metricsAddr string
 	var pprofAddr string
 	var probeAddr string
+	var webHookPort int
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var enablePprof bool
 	var enableLeaderElection bool
 	var tlsOpts []func(*tls.Config)
+	flag.IntVar(&webHookPort, "webhook-bind-port", 9443, "bind port to webhook server. default is 9443")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -147,11 +149,11 @@ func main() {
 	var webhookServer webhook.Server
 	// 修改配置，在这个基础上添加了环境变量的判断，这样在本地测试的时候传入变量即可
 	webhookServer = webhook.NewServer(webhook.Options{
-		// Port: 9443, // 设置webhook服务监听端口，默认9443
+		Port: webHookPort, // 设置webhook服务监听端口，默认9443
 		// 获取证书位置,在本地测试使用
-		// CertDir:  "./internal/webhook/certs",
-		// CertName: "tls.crt",
-		// KeyName:  "tls.key",
+		CertDir:  "./internal/webhook/certs",
+		CertName: "tls.crt",
+		KeyName:  "tls.key",
 		// 默认配置
 		TLSOpts: tlsOpts,
 	})

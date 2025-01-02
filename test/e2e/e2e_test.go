@@ -31,16 +31,16 @@ import (
 )
 
 // namespace where the project is deployed in
-const namespace = "aloys-application-operator-system"
+const namespace = "aloys-application-operator-webhook-system"
 
 // serviceAccountName created for the project
-const serviceAccountName = "aloys-application-operator-controller-manager"
+const serviceAccountName = "aloys-application-operator-webhook-controller-manager"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "aloys-application-operator-controller-manager-metrics-service"
+const metricsServiceName = "aloys-application-operator-webhook-c-m-metrics-service"
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "aloys-application-operator-metrics-binding"
+const metricsRoleBindingName = "aloys-application-operator-webhook-metrics-auth-rolebinding"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string

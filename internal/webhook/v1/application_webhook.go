@@ -40,7 +40,7 @@ func SetupApplicationWebhookWithManager(mgr ctrl.Manager) error {
 		// WithValidator数据验证
 		WithValidator(&ApplicationCustomValidator{}).
 		// WithDefaulter数据修改
-		// 自定义字段初始化后再校验
+		// 自定义字段初始化后再校验 ApplicationCustomDefaulter这个实例随后被注册到 webhook 中，以确保每当一个新的 Application 资源被创建或更新时，都会调用这个 defaulter 来设置默认值
 		WithDefaulter(&ApplicationCustomDefaulter{DefaultReplicas: 1}).
 		Complete()
 }
@@ -75,12 +75,14 @@ func (d *ApplicationCustomDefaulter) Default(ctx context.Context, obj runtime.Ob
 	applicationlog.Info("Defaulting for Application", "name", application.GetName())
 
 	// TODO(user): fill in your defaulting logic.
+	// 设置默认副本数量
 	if application.Spec.Deployment.Replicas == nil {
-		return nil
-	}
-	// 判断副本数量
-	if *application.Spec.Deployment.Replicas != d.DefaultReplicas {
 		application.Spec.Deployment.Replicas = &d.DefaultReplicas
+	}
+	// 判断副本数量，并限制最大值为 8
+	if *application.Spec.Deployment.Replicas > 9 {
+		maxReplicas := int32(8)                             // 创建一个 int32 类型的变量
+		application.Spec.Deployment.Replicas = &maxReplicas // 将其地址赋值给 Replicas
 		applicationlog.Info("Setting default replicas for application.", "ApplicationName", application.Name, "NewReplicas", d.DefaultReplicas)
 	}
 	// // 追加标签
